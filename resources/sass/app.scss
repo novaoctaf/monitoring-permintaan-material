@@ -1,0 +1,11 @@
+// Variables
+@use 'variables' as vars;
+
+// Bootstrap
+@use 'bootstrap/scss/bootstrap' as bootstrap;
+
+// Suppress deprecation warnings
+$color-function-deprecation: false;
+
+// Fonts
+@import url('https://fonts.bunny.net/css?family=Nunito');
