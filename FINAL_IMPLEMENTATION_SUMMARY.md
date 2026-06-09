@@ -180,7 +180,7 @@ composer require maatwebsite/excel
 
 1. **Install the package**:
    ```bash
-   cd /Users/vonsofh/Code/laravel/ptmaruwa-admin
+   cd C:\wamp64\www\monitoring-permintaan-material
    composer require maatwebsite/excel
    ```
 

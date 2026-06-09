@@ -13,7 +13,7 @@ Aplikasi admin panel untuk PT Maruwa Indonesia.
 
 ### 1. Clone Repositori
 ```bash
-git clone https://github.com/vonsofh/ptmaruwa-admin.git
+git clone https://github.com/novaoctaf/monitoring-permintaan-material.git
 cd ptmaruwa-admin
 ```
 
