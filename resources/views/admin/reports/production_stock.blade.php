@@ -10,9 +10,6 @@
     <button type="button" class="btn btn-success d-none d-sm-inline-block" onclick="exportReport('xlsx')">
       <i class="ti ti-file-spreadsheet"></i> Export Excel
     </button>
-    <button type="button" class="btn btn-outline-success d-none d-sm-inline-block" onclick="exportReport('csv')">
-      <i class="ti ti-file-text"></i> Export CSV
-    </button>
     <button type="button" class="btn btn-success d-sm-none" onclick="exportReport('xlsx')">
       <i class="ti ti-file-spreadsheet"></i>
     </button>

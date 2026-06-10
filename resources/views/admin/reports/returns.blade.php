@@ -7,33 +7,11 @@
 
 @section('page-actions')
   <div class="btn-list">
-    <div class="btn-group d-none d-sm-inline-flex">
-      <button type="button" class="btn btn-success" onclick="exportReport('xlsx')">
-        <i class="ti ti-download me-1"></i> Export
-      </button>
-      <button type="button" class="btn btn-success dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
-        <span class="visually-hidden">Toggle Dropdown</span>
-      </button>
-      <ul class="dropdown-menu dropdown-menu-end">
-        <li>
-          <a class="dropdown-item" href="javascript:void(0)" onclick="exportReport('xlsx')">
-            <i class="ti ti-file-spreadsheet me-2"></i> Excel (.xlsx)
-          </a>
-        </li>
-        <li>
-          <a class="dropdown-item" href="javascript:void(0)" onclick="exportReport('csv')">
-            <i class="ti ti-file-text me-2"></i> CSV (.csv)
-          </a>
-        </li>
-        <li>
-          <a class="dropdown-item" href="javascript:void(0)" onclick="exportReport('pdf')">
-            <i class="ti ti-file-type-pdf me-2"></i> PDF (.pdf)
-          </a>
-        </li>
-      </ul>
-    </div>
+    <button type="button" class="btn btn-success d-none d-sm-inline-block" onclick="exportReport('xlsx')">
+      <i class="ti ti-file-spreadsheet"></i> Export Excel
+    </button>
     <button type="button" class="btn btn-success d-sm-none" onclick="exportReport('xlsx')">
-      <i class="ti ti-download"></i>
+      <i class="ti ti-file-spreadsheet"></i>
     </button>
   </div>
 @endsection
@@ -265,18 +243,11 @@
 function exportReport(format) {
   const params = new URLSearchParams(window.location.search);
   params.append('format', format);
-  
-  // Create hidden iframe for download
-  const iframe = document.createElement('iframe');
-  iframe.style.display = 'none';
-  document.body.appendChild(iframe);
-  
-  // Create form and submit to iframe
+
   const form = document.createElement('form');
   form.method = 'POST';
   form.action = '{{ route("admin.reports.returns.export") }}';
-  form.target = iframe.name = 'download-iframe-' + Date.now();
-  
+
   const csrfInput = document.createElement('input');
   csrfInput.type = 'hidden';
   csrfInput.name = '_token';
@@ -293,23 +264,7 @@ function exportReport(format) {
 
   document.body.appendChild(form);
   form.submit();
-  
-  setTimeout(() => {
-    Swal.fire({
-      toast: true,
-      position: 'top-end',
-      icon: 'success',
-      title: 'Data berhasil diexport',
-      showConfirmButton: false,
-      timer: 3000,
-      timerProgressBar: true
-    });
-    
-    setTimeout(() => {
-      document.body.removeChild(iframe);
-      document.body.removeChild(form);
-    }, 100);
-  }, 500);
+  document.body.removeChild(form);
 }
 </script>
 @endpush
