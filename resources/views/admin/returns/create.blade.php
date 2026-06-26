@@ -96,7 +96,7 @@
         const materialName = option.dataset.material || '';
         
         unitDisplay.textContent = unit;
-        quantityInfo.textContent = `Sisa stok yang dapat dikembalikan: ${quantity} ${unit} (${materialName})`;
+        quantityInfo.textContent = `Sisa stok yang dapat dikembalikan tidak boleh melebihi: ${quantity} ${unit} (${materialName})`;
         quantityInput.setAttribute('max', quantity);
       } else {
         unitDisplay.textContent = 'satuan';
