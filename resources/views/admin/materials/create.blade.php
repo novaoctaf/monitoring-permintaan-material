@@ -70,7 +70,7 @@
               <label class="form-label required">Batas Kritis</label>
               <div class="input-group">
                 <input type="number" name="critical_threshold" class="form-control @error('critical_threshold') is-invalid @enderror"
-                  value="{{ old('critical_threshold', 0) }}" min="0" step="0.001" onkeydown="return event.key !== '-'"required>
+                  value="{{ old('critical_threshold', 0) }}" min="0" step="0.001" required>
                 <span class="input-group-text" id="unit-addon-threshold">{{ old('unit') ?: 'satuan' }}</span>
               </div>
               @error('critical_threshold')
@@ -83,7 +83,7 @@
               <label class="form-label required">Stok Awal</label>
               <div class="input-group">
                 <input type="number" name="initial_stock" class="form-control @error('initial_stock') is-invalid @enderror" 
-                  value="{{ old('initial_stock', 0) }}" min="0" step="0.001"onkeydown="return event.key !== '-'"required>
+                  value="{{ old('initial_stock', 0) }}" min="0" step="0.001" required>
                 <span class="input-group-text" id="unit-addon-stock">{{ old('unit') ?: 'satuan' }}</span>
               </div>
               @error('initial_stock')

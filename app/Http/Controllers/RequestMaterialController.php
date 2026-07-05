@@ -91,7 +91,7 @@ class RequestMaterialController extends Controller
         
         $material = Material::with('stock')->findOrFail($validated['material_id']);
         
-        // Check if stock is sufficient
+        // Periksa apakah stok mencukupi
         if (!$material->stock || $material->stock->quantity < $validated['quantity']) {
             $availableStock = $material->stock ? $material->stock->quantity : 0;
             return redirect()->back()->withInput()->with('error', 

@@ -43,7 +43,7 @@
               <label class="form-label required">Jumlah Pengembalian</label>
               <div class="input-group">
                 <input type="number" name="quantity" class="form-control @error('quantity') is-invalid @enderror"
-                       value="{{ old('quantity', 1) }}" min="1"onkeydown="return event.key !== '-'"required>
+                       value="{{ old('quantity', 1) }}" min="1" required>
                 <span class="input-group-text" id="unit-display">satuan</span>
               </div>
               @error('quantity')

@@ -22,7 +22,7 @@
                 <option value="">Pilih Material</option>
                 @foreach($materials as $material)
                   @php
-                    $stockQty = $material->stock->quantity ?? 0;
+                    $stockQty = (float) $material->stock->quantity ?? 0;
                     $disabled = $stockQty <= 0;
                   @endphp
                   <option value="{{ $material->id }}" 
@@ -52,7 +52,7 @@
               <label class="form-label required">Jumlah</label>
               <div class="input-group">
                 <input type="number" name="quantity"class="form-control @error('quantity') is-invalid @enderror"
-                  value="{{ old('quantity', 1) }}"min="1"onkeydown="return event.key !== '-'"required>
+                  value="{{ old('quantity', 1) }}" min="1" required>
                 <span class="input-group-text" id="unit-display">satuan</span>
                 @error('quantity')
                   <div class="invalid-feedback">{{ $message }}</div>

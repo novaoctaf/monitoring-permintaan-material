@@ -7,7 +7,7 @@
   @if(auth()->user()->hasRole('produksi') || request('view') === 'produksi')
     Stok Produksi
   @else
-    Stok
+    Stok Gudang
   @endif
 @endsection
 

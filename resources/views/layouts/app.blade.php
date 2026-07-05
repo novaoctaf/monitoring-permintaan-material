@@ -275,6 +275,29 @@
         window.addEventListener('scroll', function () { if (isOpen()) close(); }, true);
       });
 
+      // ── Reusable numeric input guard ──────────────────────────────
+      // Blocks invalid characters (letters, e/E, +, and an out-of-range
+      // sign) from every <input type="number"> via ONE delegated listener.
+      // Covers typing, paste and drag-drop, on desktop & mobile alike.
+      // Rules are derived from each field's own attributes:
+      //   • decimals allowed when step is "any" or a non-integer (e.g. 0.001)
+      //   • negatives allowed only when min is absent or below 0
+      (function () {
+        function allowedPattern(el) {
+          var step = el.getAttribute('step');
+          var min = el.getAttribute('min');
+          var allowDecimal = step === 'any' || (step !== null && !Number.isInteger(parseFloat(step)));
+          var allowNegative = min === null || parseFloat(min) < 0;
+          return new RegExp('^[0-9' + (allowDecimal ? '.' : '') + (allowNegative ? '\\-' : '') + ']*$');
+        }
+        document.addEventListener('beforeinput', function (e) {
+          var el = e.target;
+          if (!(el instanceof HTMLInputElement) || el.type !== 'number') return;
+          if (e.data == null) return; // deletions / non-text input methods
+          if (!allowedPattern(el).test(e.data)) e.preventDefault();
+        });
+      })();
+
       // Toastr configuration
       toastr.options = {
           "closeButton": true,

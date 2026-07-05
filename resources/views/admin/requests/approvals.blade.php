@@ -83,7 +83,7 @@
               <td>{{ $req->created_at->format('d M Y H:i') }}</td>
               <td>
                 @php
-                  $stockQty = $req->material->stock->quantity ?? 0;
+                  $stockQty = (float) $req->material->stock->quantity ?? 0;
                   $sufficient = $stockQty >= $req->quantity;
                   $badgeClass = $sufficient ? 'bg-success' : 'bg-danger';
                 @endphp

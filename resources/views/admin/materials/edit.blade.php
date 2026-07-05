@@ -19,19 +19,19 @@
           <div class="row g-3">
             <div class="col-md-12">
               <label class="form-label required">Nama Material</label>
-              <input type="text" name="name" class="form-control @error('name') is-invalid @enderror" 
+              <input type="text" name="name" class="form-control @error('name') is-invalid @enderror"
                 value="{{ old('name', $material->name) }}" placeholder="Masukkan nama material" required autofocus>
               @error('name')
-                <div class="invalid-feedback">{{ $message }}</div>
+              <div class="invalid-feedback">{{ $message }}</div>
               @enderror
             </div>
 
             <div class="col-md-12">
               <label class="form-label">Deskripsi</label>
-              <textarea name="description" class="form-control @error('description') is-invalid @enderror" rows="3" 
+              <textarea name="description" class="form-control @error('description') is-invalid @enderror" rows="3"
                 placeholder="Deskripsi material (opsional)">{{ old('description', $material->description) }}</textarea>
               @error('description')
-                <div class="invalid-feedback">{{ $message }}</div>
+              <div class="invalid-feedback">{{ $message }}</div>
               @enderror
             </div>
 
@@ -40,17 +40,18 @@
               <select name="category_id" class="form-select @error('category_id') is-invalid @enderror">
                 <option value="">Pilih Kategori</option>
                 @foreach($categories as $category)
-                  <option value="{{ $category->id }}" {{ old('category_id', $material->category_id) == $category->id ? 'selected' : '' }}>
-                    {{ $category->name }}
-                  </option>
+                <option value="{{ $category->id }}" {{ old('category_id', $material->category_id) == $category->id ?
+                  'selected' : '' }}>
+                  {{ $category->name }}
+                </option>
                 @endforeach
               </select>
               @error('category_id')
-                <div class="invalid-feedback">{{ $message }}</div>
+              <div class="invalid-feedback">{{ $message }}</div>
               @enderror
               <small class="form-hint">Pilih kategori untuk memudahkan pengelompokan material</small>
             </div>
-            
+
             <div class="col-md-6">
               <label class="form-label required">Satuan</label>
               <select name="unit" class="form-select @error('unit') is-invalid @enderror" required>
@@ -63,30 +64,33 @@
                 <option value="roll" {{ old('unit', $material->unit) == 'roll' ? 'selected' : '' }}>roll</option>
               </select>
               @error('unit')
-                <div class="invalid-feedback">{{ $message }}</div>
+              <div class="invalid-feedback">{{ $message }}</div>
               @enderror
             </div>
 
             <div class="col-md-6">
               <label class="form-label required">Batas Kritis</label>
               <div class="input-group">
-                <input type="number" name="critical_threshold" class="form-control @error('critical_threshold') is-invalid @enderror"
-                  value="{{ old('critical_threshold', $material->critical_threshold ?? 0) }}" min="0" step="0.001" required>
+                <input type="number" name="critical_threshold"
+                  class="form-control @error('critical_threshold') is-invalid @enderror"
+                  value="{{ old('critical_threshold', (float) $material->critical_threshold ?? 0) }}" min="0" step="0.001"
+                  required>
                 <span class="input-group-text">{{ $material->unit }}</span>
               </div>
               @error('critical_threshold')
-                <div class="invalid-feedback">{{ $message }}</div>
+              <div class="invalid-feedback">{{ $message }}</div>
               @enderror
               <small class="form-hint">Stok di bawah nilai ini akan dianggap kritis.</small>
             </div>
-            
+
             <div class="col-md-6">
               <label class="form-label">Stok Saat Ini</label>
               <div class="input-group">
-                <input type="text" class="form-control" value="{{ $material->stock->quantity ?? 0 }}" disabled readonly>
+                <input type="text" class="form-control" value="{{ (float) $material->stock->quantity ?? 0 }}" disabled readonly>
                 <span class="input-group-text">{{ $material->unit }}</span>
               </div>
-              <small class="form-hint">Untuk mengubah stok, gunakan fitur <a href="{{ route('admin.stocks.adjust', ['material_id' => $material->id]) }}">Sesuaikan Stok</a></small>
+              <small class="form-hint">Untuk mengubah stok, gunakan fitur <a
+                  href="{{ route('admin.stocks.adjust', ['material_id' => $material->id]) }}">Sesuaikan Stok</a></small>
             </div>
           </div>
         </div>

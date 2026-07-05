@@ -62,7 +62,7 @@
             <div class="datagrid-title">Stok</div>
             <div class="datagrid-content">
               @php
-                $stockQty = $material->stock->quantity ?? 0;
+                $stockQty = (float) $material->stock->quantity ?? 0;
                 $badgeClass = $stockQty <= 0 ? 'bg-danger' : ($stockQty <= 10 ? 'bg-warning' : 'bg-success');
               @endphp
               <span class="badge {{ $badgeClass }}-lt">{{ $stockQty }} {{ $material->unit }}</span>
@@ -113,7 +113,7 @@
           <div>
             <h3 class="mb-0">
               <a href="{{ route('admin.stocks.show', $material) }}" class="text-reset">
-                {{ $material->stock->quantity ?? 0 }} <small>{{ $material->unit }}</small>
+                {{ (float) $material->stock->quantity ?? 0 }} <small>{{ $material->unit }}</small>
               </a>
             </h3>
             <div class="text-muted">Stok saat ini</div>

@@ -245,14 +245,14 @@
       href="{{ route('admin.users.index') }}">
       Pengguna
     </a>
-    <a class="dropdown-item {{ request()->routeIs('admin.roles.*') ? 'active' : '' }}"
+    {{-- <a class="dropdown-item {{ request()->routeIs('admin.roles.*') ? 'active' : '' }}"
       href="{{ route('admin.roles.index') }}">
       Peran
     </a>
     <a class="dropdown-item {{ request()->routeIs('admin.permissions.*') ? 'active' : '' }}"
       href="{{ route('admin.permissions.index') }}">
       Izin
-    </a>
+    </a> --}}
   </div>
 </li>
 @endrole

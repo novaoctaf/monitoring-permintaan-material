@@ -100,7 +100,7 @@
       </div>
     </div>
     
-    <div class="card mt-3">
+    {{-- <div class="card mt-3">
       <div class="card-header">
         <h3 class="card-title">Aktivitas Terbaru</h3>
       </div>
@@ -108,7 +108,7 @@
         <div class="alert alert-info">
           Pencatatan aktivitas pengguna akan tersedia dalam pengembangan berikutnya.
         </div>
-      </div>
+      </div> --}}
     </div>
   </div>
 </div>

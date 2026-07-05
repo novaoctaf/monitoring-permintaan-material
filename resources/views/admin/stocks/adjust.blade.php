@@ -23,13 +23,13 @@
                 <option value="">Pilih Material</option>
                 @foreach($materials as $material)
                   <option value="{{ $material->id }}" {{ old('material_id', request('material_id')) == $material->id ? 'selected' : '' }}>
-                    {{ $material->name }} ({{ $material->stock->quantity ?? 0 }} {{ $material->unit }})
+                    {{ $material->name }} ({{ (float) $material->stock->quantity ?? 0 }} {{ $material->unit }})
                   </option>
                 @endforeach
               </select>
               @error('material_id')
                 <div class="invalid-feedback">{{ $message }}</div>
-              @enderror
+              @enderror 
             </div>
 
             <div class="col-md-6">

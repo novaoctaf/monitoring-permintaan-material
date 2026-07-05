@@ -39,7 +39,7 @@
           <div class="mb-3">
             <label class="form-label">Jumlah Pemakaian</label>
             <input type="number" name="quantity" min="1" step="1" class="form-control @error('quantity') is-invalid @enderror"
-              value="{{ old('quantity') }}" placeholder="Masukkan jumlah yang dipakai" oninput="this.value = this.value.replace(/[^0-9]/g, ''); if(this.value < 1) this.value = '';">
+              value="{{ old('quantity') }}" placeholder="Masukkan jumlah yang dipakai">
             @error('quantity')
               <div class="invalid-feedback">{{ $message }}</div>
               
