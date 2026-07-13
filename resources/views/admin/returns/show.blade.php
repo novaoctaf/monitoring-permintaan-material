@@ -7,7 +7,7 @@
 
 @section('page-actions')
   <div class="btn-list">
-    @if(auth()->user()->can('approve-returns') && $return->status == 'pending')
+    @if(auth()->user()->can('approve-returns') && !auth()->user()->hasRole('store') && $return->status == 'pending')
     <div class="btn-group">
       <button type="button" class="btn btn-success d-none d-sm-inline-block" data-bs-toggle="modal" data-bs-target="#approveModal">
         <i class="ti ti-check"></i> Setujui
@@ -17,7 +17,35 @@
       </button>
     </div>
     @endif
-    
+
+    {{-- Serah terima: produksi mengembalikan barang --}}
+    @role('produksi')
+      @if($return->status == 'approved' && !$return->handed_over_at && $return->returned_by == auth()->id())
+      <button type="button" class="btn btn-cyan js-confirm-action"
+              data-action="{{ route('admin.returns.handover', $return) }}"
+              data-title="Serahkan Barang · {{ $return->return_number }}"
+              data-note="Barang dikembalikan ke store."
+              data-body="<div class='mb-1'><strong>Material:</strong> {{ $return->request->material->name }}</div><div class='mb-1'><strong>Jumlah:</strong> {{ $return->quantity }} {{ $return->request->material->unit }}</div><div class='mb-1'><strong>No. Permintaan:</strong> {{ $return->request->request_number }}</div>"
+              data-confirm-label="Serahkan" data-confirm-class="btn-cyan">
+        <i class="ti ti-truck-delivery"></i> Serahkan Barang
+      </button>
+      @endif
+    @endrole
+
+    {{-- Serah terima: store menerima barang --}}
+    @role('store')
+      @if($return->status == 'approved' && $return->handed_over_at && !$return->received_at)
+      <button type="button" class="btn btn-teal js-confirm-action"
+              data-action="{{ route('admin.returns.receive', $return) }}"
+              data-title="Terima Barang · {{ $return->return_number }}"
+              data-note="Stok utama akan bertambah."
+              data-body="<div class='mb-1'><strong>Material:</strong> {{ $return->request->material->name }}</div><div class='mb-1'><strong>Jumlah:</strong> {{ $return->quantity }} {{ $return->request->material->unit }}</div><div class='mb-1'><strong>Dikembalikan oleh:</strong> {{ $return->returner->name }}</div>"
+              data-confirm-label="Terima" data-confirm-class="btn-teal">
+        <i class="ti ti-package-import"></i> Terima Barang
+      </button>
+      @endif
+    @endrole
+
     @if(auth()->user()->can('view-returns'))
     <a href="{{ auth()->user()->can('approve-returns') ? route('admin.returns.approvals') : route('admin.returns.index') }}" class="btn btn-outline-secondary">
       <i class="ti ti-arrow-left"></i> Kembali
@@ -37,6 +65,13 @@
             <span class="badge bg-yellow-lt">Menunggu</span>
           @elseif($return->status == 'approved')
             <span class="badge bg-green-lt">Disetujui</span>
+            @if($return->handover_status == 'received')
+              <span class="badge bg-teal-lt">Diterima</span>
+            @elseif($return->handover_status == 'handed_over')
+              <span class="badge bg-cyan-lt">Diserahkan</span>
+            @else
+              <span class="badge bg-azure-lt">Menunggu Penyerahan</span>
+            @endif
           @else
             <span class="badge bg-red-lt">Ditolak</span>
           @endif
@@ -100,7 +135,33 @@
             <div class="datagrid-content">{{ $return->approved_at ? $return->approved_at->format('d M Y H:i') : '-' }}</div>
           </div>
           @endif
-          
+
+          @if($return->status == 'approved')
+          <div class="datagrid-item">
+            <div class="datagrid-title">Penyerahan Barang</div>
+            <div class="datagrid-content">
+              @if($return->handed_over_at)
+                Oleh {{ $return->handedOverBy->name ?? '-' }} &middot; {{ $return->handed_over_at->format('d M Y H:i') }}
+              @else
+                <span class="text-muted">Menunggu penyerahan oleh produksi</span>
+              @endif
+            </div>
+          </div>
+
+          <div class="datagrid-item">
+            <div class="datagrid-title">Penerimaan Barang</div>
+            <div class="datagrid-content">
+              @if($return->received_at)
+                Oleh {{ $return->receivedBy->name ?? '-' }} &middot; {{ $return->received_at->format('d M Y H:i') }}
+              @elseif($return->handed_over_at)
+                <span class="text-muted">Menunggu konfirmasi penerimaan oleh store</span>
+              @else
+                <span class="text-muted">-</span>
+              @endif
+            </div>
+          </div>
+          @endif
+
           @if($return->notes)
           <div class="datagrid-item col-span-2">
             <div class="datagrid-title">Catatan</div>
@@ -130,15 +191,61 @@
             </div>
           </div>
 
-          @if($return->status == 'pending')
+          @if($return->status != 'rejected' && !$return->received_at)
           <div class="datagrid-item">
-            <div class="datagrid-title">Stok Setelah Disetujui</div>
+            <div class="datagrid-title">Stok Setelah Diterima</div>
             <div class="datagrid-content">
               <span class="badge bg-blue-lt">{{ $stockQty + $return->quantity }} {{ $return->request->material->unit }}</span>
             </div>
           </div>
           @endif
         </div>
+      </div>
+    </div>
+
+    <!-- Audit Trail / Riwayat Aktivitas -->
+    <div class="card mt-3">
+      <div class="card-header">
+        <h3 class="card-title">Riwayat Aktivitas</h3>
+      </div>
+      <div class="card-body">
+        @php $fieldLabels = \App\Models\ReturnMaterial::activityFieldLabels(); @endphp
+        @if($return->activities->isEmpty())
+          <p class="text-secondary mb-0">Belum ada aktivitas tercatat.</p>
+        @else
+          <ul class="timeline">
+          @foreach($return->activities as $activity)
+            <li class="timeline-event">
+              <div class="timeline-event-icon bg-{{ $activity->event_color }}-lt">
+                <i class="ti {{ $activity->event_icon }}"></i>
+              </div>
+              <div class="card timeline-event-card">
+                <div class="card-body">
+                  <div class="text-secondary float-end">{{ $activity->created_at->format('d M Y H:i') }}</div>
+                  <h4 class="mb-1">{{ $activity->description }}</h4>
+                  <p class="text-secondary mb-1">
+                    <i class="ti ti-user me-1"></i>{{ $activity->causer->name ?? 'Sistem' }}
+                  </p>
+                  @if($activity->event === 'updated' && !empty($activity->properties['attributes']))
+                    <div class="mt-2">
+                      @foreach($activity->properties['attributes'] as $field => $newValue)
+                        @if(isset($fieldLabels[$field]))
+                          <div class="small text-secondary">
+                            <strong>{{ $fieldLabels[$field] }}:</strong>
+                            <span class="text-decoration-line-through">{{ $activity->properties['old'][$field] ?? '-' }}</span>
+                            <i class="ti ti-arrow-right"></i>
+                            {{ $newValue ?? '-' }}
+                          </div>
+                        @endif
+                      @endforeach
+                    </div>
+                  @endif
+                </div>
+              </div>
+            </li>
+          @endforeach
+          </ul>
+        @endif
       </div>
     </div>
   </div>
@@ -195,19 +302,8 @@
 </div>
 @endif
 
-@if(session('success') || session('error'))
-<div class="toast-container position-fixed bottom-0 end-0 p-3">
-  <div class="toast show" role="alert" aria-live="assertive" aria-atomic="true">
-    <div class="toast-header">
-      <strong class="me-auto">Notifikasi</strong>
-      <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
-    </div>
-    <div class="toast-body {{ session('success') ? 'bg-success' : 'bg-danger' }} text-white">
-      {{ session('success') ?? session('error') }}
-    </div>
-  </div>
-</div>
-@endif
+@include('layouts.partials.action-modals')
+
 @endsection
 
 @push('scripts')

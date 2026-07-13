@@ -17,33 +17,30 @@
         <div class="card-body">
           <div class="row g-3">
             <div class="col-md-12">
-              <label class="form-label required">Pilih Permintaan</label>
-              <select name="request_id" id="request-select" class="form-select @error('request_id') is-invalid @enderror" required>
-                <option value="">Pilih Permintaan Material</option>
-                @foreach($eligibleRequests as $req)
-                  @php
-                    $isSelected = $selectedRequest && $selectedRequest->id == $req->id;
-                  @endphp
-                  <option value="{{ $req->id }}"
-                          data-quantity="{{ $req->returnable_quantity }}"
-                          data-unit="{{ $req->material->unit }}"
-                          data-material="{{ $req->material->name }}"
-                          {{ $isSelected || old('request_id') == $req->id ? 'selected' : '' }}>
-                    #{{ $req->request_number }} - {{ $req->material->name }} ({{ $req->returnable_quantity }} {{ $req->material->unit }} tersisa)
+              <label class="form-label required">Pilih Material</label>
+              <select name="request_id" id="request-select" class="form-select {{ $eligibleMaterials->isEmpty() ? 'no-tomselect text-muted' : '' }} @error('request_id') is-invalid @enderror" required @disabled($eligibleMaterials->isEmpty())>
+                <option value="">{{ $eligibleMaterials->isEmpty() ? 'Tidak ada material yang dapat dikembalikan saat ini' : 'Pilih material yang akan dikembalikan' }}</option>
+                @foreach($eligibleMaterials as $item)
+                  <option value="{{ $item->representative_request_id }}"
+                          data-quantity="{{ $item->returnable_quantity }}"
+                          data-unit="{{ $item->material->unit }}"
+                          data-material="{{ $item->material->name }}"
+                          {{ ($selectedRequestId == $item->representative_request_id) || old('request_id') == $item->representative_request_id ? 'selected' : '' }}>
+                    {{ $item->material->name }} — {{ $item->returnable_quantity }} {{ $item->material->unit }} dapat dikembalikan @unless($isProduksi) ({{ $item->requester_name }}) @endunless
                   </option>
                 @endforeach
               </select>
               @error('request_id')
                 <div class="invalid-feedback">{{ $message }}</div>
               @enderror
-              <small class="form-hint">Hanya permintaan yang disetujui dan masih memiliki sisa stok yang dapat dikembalikan</small>
+              <small class="form-hint">Hanya material yang masih Anda pegang (belum dipakai/dikembalikan) yang dapat dikembalikan</small>
             </div>
 
             <div class="col-md-6">
               <label class="form-label required">Jumlah Pengembalian</label>
               <div class="input-group">
                 <input type="number" name="quantity" class="form-control @error('quantity') is-invalid @enderror"
-                       value="{{ old('quantity', 1) }}" min="1" required>
+                       value="{{ old('quantity') }}" min="1" placeholder="0" required @disabled($eligibleMaterials->isEmpty())>
                 <span class="input-group-text" id="unit-display">satuan</span>
               </div>
               @error('quantity')
@@ -68,7 +65,7 @@
               <i class="ti ti-arrow-left"></i> Kembali
             </a>
             <button type="reset" class="btn btn-link">Reset</button>
-            <button type="submit" class="btn btn-primary ms-2">
+            <button type="submit" class="btn btn-primary ms-2" @disabled($eligibleMaterials->isEmpty())>
               <i class="ti ti-send"></i> Kirim Pengembalian
             </button>
           </div>

@@ -180,19 +180,6 @@
   </div>
 </div>
 
-@if(session('success') || session('error'))
-<div class="toast-container position-fixed bottom-0 end-0 p-3">
-  <div class="toast show" role="alert" aria-live="assertive" aria-atomic="true">
-    <div class="toast-header">
-      <strong class="me-auto">Notifikasi</strong>
-      <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
-    </div>
-    <div class="toast-body {{ session('success') ? 'bg-success' : 'bg-danger' }} text-white">
-      {{ session('success') ?? session('error') }}
-    </div>
-  </div>
-</div>
-@endif
 @endsection
 
 @push('scripts')

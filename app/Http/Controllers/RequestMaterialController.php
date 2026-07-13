@@ -125,7 +125,7 @@ class RequestMaterialController extends Controller
      */
     public function show(RequestMaterial $request)
     {
-        $request->load(['material.category', 'requester', 'approver', 'returns']);
+        $request->load(['material.category', 'requester', 'approver', 'returns', 'activities.causer']);
         
         // Check if user can view this request
         if (auth()->user()->hasRole('produksi') && $request->requested_by != auth()->id()) {

@@ -119,14 +119,65 @@
                   <span class="badge bg-yellow-lt">Menunggu</span>
                 @elseif($return->status == 'approved')
                   <span class="badge bg-green-lt">Disetujui</span>
+                  @if($return->handover_status == 'received')
+                    <span class="badge bg-teal-lt">Diterima</span>
+                  @elseif($return->handover_status == 'handed_over')
+                    <span class="badge bg-cyan-lt">Diserahkan</span>
+                  @else
+                    <span class="badge bg-azure-lt">Menunggu Penyerahan</span>
+                  @endif
                 @else
                   <span class="badge bg-red-lt">Ditolak</span>
                 @endif
               </td>
               <td>
-                <a href="{{ route('admin.returns.show', $return) }}" class="btn btn-sm btn-primary">
-                  <i class="ti ti-eye"></i>
-                </a>
+                <div class="btn-list flex-nowrap">
+                  <a href="{{ route('admin.returns.show', $return) }}" class="btn btn-sm btn-icon btn-primary" title="Lihat detail">
+                    <i class="ti ti-eye"></i>
+                  </a>
+
+                  @if(auth()->user()->can('approve-returns') && !auth()->user()->hasRole('store') && $return->status == 'pending')
+                    <button type="button" class="btn btn-sm btn-success js-confirm-action"
+                            data-action="{{ route('admin.returns.approve', $return) }}"
+                            data-title="Setujui Pengembalian {{ $return->return_number }}"
+                            data-note="Setelah disetujui, barang diserahkan oleh produksi."
+                            data-body="<div class='mb-1'><strong>Material:</strong> {{ $return->request->material->name }}</div><div class='mb-1'><strong>Jumlah:</strong> {{ $return->quantity }} {{ $return->request->material->unit }}</div><div class='mb-1'><strong>Dikembalikan oleh:</strong> {{ $return->returner->name }}</div>"
+                            data-confirm-label="Setujui" data-confirm-class="btn-success">
+                      <i class="ti ti-check"></i> Setujui
+                    </button>
+                    <button type="button" class="btn btn-sm btn-danger js-reject-action"
+                            data-action="{{ route('admin.returns.reject', $return) }}"
+                            data-title="Tolak Pengembalian {{ $return->return_number }}">
+                      <i class="ti ti-x"></i> Tolak
+                    </button>
+                  @endif
+
+                  @role('produksi')
+                    @if($return->status == 'approved' && !$return->handed_over_at && $return->returned_by == auth()->id())
+                    <button type="button" class="btn btn-sm btn-cyan js-confirm-action"
+                            data-action="{{ route('admin.returns.handover', $return) }}"
+                            data-title="Serahkan Barang · {{ $return->return_number }}"
+                            data-note="Barang dikembalikan ke store."
+                            data-body="<div class='mb-1'><strong>Material:</strong> {{ $return->request->material->name }}</div><div class='mb-1'><strong>Jumlah:</strong> {{ $return->quantity }} {{ $return->request->material->unit }}</div>"
+                            data-confirm-label="Serahkan" data-confirm-class="btn-cyan">
+                      <i class="ti ti-truck-delivery"></i> Serahkan
+                    </button>
+                    @endif
+                  @endrole
+
+                  @role('store')
+                    @if($return->status == 'approved' && $return->handed_over_at && !$return->received_at)
+                    <button type="button" class="btn btn-sm btn-teal js-confirm-action"
+                            data-action="{{ route('admin.returns.receive', $return) }}"
+                            data-title="Terima Barang · {{ $return->return_number }}"
+                            data-note="Stok utama akan bertambah."
+                            data-body="<div class='mb-1'><strong>Material:</strong> {{ $return->request->material->name }}</div><div class='mb-1'><strong>Jumlah:</strong> {{ $return->quantity }} {{ $return->request->material->unit }}</div><div class='mb-1'><strong>Dikembalikan oleh:</strong> {{ $return->returner->name }}</div>"
+                            data-confirm-label="Terima" data-confirm-class="btn-teal">
+                      <i class="ti ti-package-import"></i> Terima
+                    </button>
+                    @endif
+                  @endrole
+                </div>
               </td>
             </tr>
           @empty
@@ -166,19 +217,8 @@
   </div>
 </div>
 
-@if(session('success') || session('error'))
-<div class="toast-container position-fixed bottom-0 end-0 p-3">
-  <div class="toast show" role="alert" aria-live="assertive" aria-atomic="true">
-    <div class="toast-header">
-      <strong class="me-auto">Notifikasi</strong>
-      <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
-    </div>
-    <div class="toast-body {{ session('success') ? 'bg-success' : 'bg-danger' }} text-white">
-      {{ session('success') ?? session('error') }}
-    </div>
-  </div>
-</div>
-@endif
+@include('layouts.partials.action-modals')
+
 @endsection
 
 @push('scripts')

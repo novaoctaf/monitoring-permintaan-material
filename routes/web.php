@@ -12,6 +12,7 @@ use App\Http\Controllers\RoleController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\MaterialConsumptionController;
+use App\Http\Controllers\ActivityLogController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 
@@ -59,6 +60,9 @@ Route::prefix('admin')->as('admin.')->middleware(['auth'])->group(function () {
     Route::get('returns/approvals', [ReturnMaterialController::class, 'approvals'])->name('returns.approvals');
     Route::post('returns/{returnMaterial}/approve', [ReturnMaterialController::class, 'approve'])->name('returns.approve');
     Route::post('returns/{returnMaterial}/reject', [ReturnMaterialController::class, 'reject'])->name('returns.reject');
+    // Serah terima pengembalian
+    Route::post('returns/{returnMaterial}/handover', [ReturnMaterialController::class, 'handover'])->name('returns.handover');
+    Route::post('returns/{returnMaterial}/receive', [ReturnMaterialController::class, 'receive'])->name('returns.receive');
     Route::resource('returns', ReturnMaterialController::class);
     
     // Reports (Staff only)
@@ -72,6 +76,9 @@ Route::prefix('admin')->as('admin.')->middleware(['auth'])->group(function () {
     Route::post('/reports/returns/export', [ReportController::class, 'exportReturns'])->name('reports.returns.export');
     Route::get('/reports/consumptions', [ReportController::class, 'consumptions'])->name('reports.consumptions');
     Route::post('/reports/consumptions/export', [ReportController::class, 'exportConsumptions'])->name('reports.consumptions.export');
+
+    // Activity log / audit trail (staff only)
+    Route::get('/activity-logs', [ActivityLogController::class, 'index'])->name('activity-logs.index');
 
     // User management routes
     Route::resource('users', UserController::class);

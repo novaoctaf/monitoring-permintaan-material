@@ -72,59 +72,72 @@ class ReturnMaterialController extends Controller
      */
     public function create(Request $request)
     {
-        // If request_id is provided in the URL, pre-select that request
-        $selectedRequest = null;
-        if ($request->filled('request_id')) {
-            $selectedRequest = RequestMaterial::with(['material'])
-                ->where('status', 'approved')
-                ->findOrFail($request->request_id);
-                
-            // Check if return is allowed
-            if (auth()->user()->hasRole('produksi') && $selectedRequest->requested_by != auth()->id()) {
-                abort(403, 'Anda hanya dapat mengembalikan material yang Anda minta.');
-            }
-        }
-        
-        // If material_id is provided, get the latest approved request for that material
-        if (!$selectedRequest && $request->filled('material_id')) {
-            $selectedRequest = RequestMaterial::with(['material'])
-                ->where('material_id', $request->material_id)
-                ->where('status', 'approved')
-                ->when(auth()->user()->hasRole('produksi'), function($query) {
-                    $query->where('requested_by', auth()->id());
-                })
-                ->latest()
-                ->first();
-        }
-        
-        // Get all eligible requests for this user (only approved requests)
-        $eligibleRequests = RequestMaterial::with([
-                'material',
-                'returns' => fn($q) => $q->where('status', 'approved'),
-            ])
+        $isProduksi = auth()->user()->hasRole('produksi');
+
+        // Kumpulkan pengembalian pada level MATERIAL. Barang yang sudah dipakai
+        // tidak bisa dikembalikan, jadi patokannya stok fisik yang masih dipegang
+        // (permintaan approved+received - retur - pemakaian - retur pending).
+        // Tiap material diwakili satu permintaan (untuk relasi request_id).
+        $requests = RequestMaterial::with(['material.category'])
             ->where('status', 'approved')
-            ->when(auth()->user()->hasRole('produksi'), function($query) {
-                $query->where('requested_by', auth()->id());
-            })
-            ->whereDoesntHave('returns', function($query) {
-                $query->where('status', 'pending');
-            })
-            ->get()
-            ->map(function($req) {
-                // Remaining for THIS request (original minus its approved returns)
-                $perRequestRemaining = $req->quantity - $req->returns->sum('quantity');
+            ->whereNotNull('received_at')
+            ->when($isProduksi, fn($q) => $q->where('requested_by', auth()->id()))
+            ->latest()
+            ->get();
 
-                // Physical stock the user still holds for this material
-                // (requested - returned - consumed). Cannot return what was already used.
-                $available = $this->availableProductionStock($req->material_id, $req->requested_by);
+        $seen = [];
+        $eligibleMaterials = collect();
+        foreach ($requests as $req) {
+            $key = $req->material_id . '-' . $req->requested_by;
+            if (isset($seen[$key])) {
+                continue; // material ini (untuk user ini) sudah diwakili
+            }
+            $seen[$key] = true;
 
-                $req->returnable_quantity = min($perRequestRemaining, $available);
-                return $req;
+            $returnable = $this->materialReturnable($req->material_id, $req->requested_by);
+            if ($returnable <= 0) {
+                continue;
+            }
+
+            $eligibleMaterials->push((object) [
+                'representative_request_id' => $req->id,
+                'material'                  => $req->material,
+                'returnable_quantity'       => $returnable,
+                'requester_name'            => $req->requester->name ?? null,
+            ]);
+        }
+
+        // Pra-pilih material bila datang dari tombol "Buat Pengembalian" pada permintaan.
+        $selectedRequestId = null;
+        $sourceMaterialId = null;
+        if ($request->filled('request_id')) {
+            $sourceMaterialId = optional(RequestMaterial::find($request->request_id))->material_id;
+        } elseif ($request->filled('material_id')) {
+            $sourceMaterialId = $request->material_id;
+        }
+        if ($sourceMaterialId) {
+            $match = $eligibleMaterials->firstWhere(fn($m) => $m->material->id == $sourceMaterialId);
+            $selectedRequestId = $match->representative_request_id ?? null;
+        }
+
+        return view('admin.returns.create', compact('eligibleMaterials', 'selectedRequestId', 'isProduksi'));
+    }
+
+    /**
+     * Sisa material yang benar-benar bisa dikembalikan pada level material:
+     * stok fisik yang dipegang user dikurangi retur yang masih pending.
+     */
+    private function materialReturnable($materialId, $userId)
+    {
+        $available = $this->availableProductionStock($materialId, $userId);
+
+        $pending = ReturnMaterial::whereHas('request', function ($q) use ($materialId, $userId) {
+                $q->where('material_id', $materialId)->where('requested_by', $userId);
             })
-            ->filter(fn($req) => $req->returnable_quantity > 0)
-            ->values();
+            ->where('status', 'pending')
+            ->sum('quantity');
 
-        return view('admin.returns.create', compact('eligibleRequests', 'selectedRequest'));
+        return max(0, $available - $pending);
     }
 
     /**
@@ -152,26 +165,22 @@ class ReturnMaterialController extends Controller
             ]);
         }
         
-        // Returnable = min(remaining for this request, physical stock still held).
-        // Physical stock subtracts what was already consumed, so used material cannot be returned.
-        $alreadyReturned = $requestMaterial->returns()->where('status', 'approved')->sum('quantity');
-        $perRequestRemaining = $requestMaterial->quantity - $alreadyReturned;
-        $available = $this->availableProductionStock($requestMaterial->material_id, $requestMaterial->requested_by);
-        $returnableQuantity = min($perRequestRemaining, $available);
+        // Patokan pengembalian pada level material: stok fisik yang masih dipegang
+        // user (sudah dikurangi retur disetujui, pemakaian, dan retur pending).
+        $returnableQuantity = $this->materialReturnable($requestMaterial->material_id, $requestMaterial->requested_by);
+
+        if ($returnableQuantity <= 0) {
+            return redirect()->back()->withInput()->withErrors([
+                'request_id' => 'Tidak ada sisa stok material ini yang dapat dikembalikan.'
+            ]);
+        }
 
         if ($validated['quantity'] > $returnableQuantity) {
             return redirect()->back()->withInput()->withErrors([
                 'quantity' => "Jumlah pengembalian tidak boleh lebih dari sisa stok yang tersedia ({$returnableQuantity} {$requestMaterial->material->unit})."
             ]);
         }
-        
-        // Check if there's already a pending return for this request
-        if ($requestMaterial->returns()->where('status', 'pending')->exists()) {
-            return redirect()->back()->withInput()->withErrors([
-                'request_id' => 'Sudah ada pengembalian yang menunggu persetujuan untuk permintaan ini.'
-            ]);
-        }
-        
+
         // Generate unique return number
         $returnNumber = 'RET-' . strtoupper(Str::random(8));
         while (ReturnMaterial::where('return_number', $returnNumber)->exists()) {
@@ -196,7 +205,7 @@ class ReturnMaterialController extends Controller
      */
     public function show(ReturnMaterial $return)
     {
-        $return->load(['request.material.category', 'returner', 'approver']);
+        $return->load(['request.material.category', 'returner', 'approver', 'handedOverBy', 'receivedBy', 'activities.causer']);
         
         // Check if user can view this return
         if (auth()->user()->hasRole('produksi') && $return->returned_by != auth()->id()) {
@@ -255,22 +264,72 @@ class ReturnMaterialController extends Controller
         if ($returnMaterial->status !== 'pending') {
             return redirect()->back()->with('error', 'Pengembalian ini sudah diproses sebelumnya.');
         }
-        
+
+        // Persetujuan TIDAK menambah stok. Stok utama baru bertambah saat barang
+        // benar-benar diterima oleh store (lihat receive()).
+        $returnMaterial->update([
+            'status' => 'approved',
+            'approved_by' => auth()->id(),
+            'approved_at' => now()
+        ]);
+
+        return redirect()->route('admin.returns.approvals')
+            ->with('success', 'Pengembalian material berhasil disetujui. Menunggu penyerahan barang oleh produksi.');
+    }
+
+    /**
+     * Serah terima: produksi menyerahkan/mengembalikan barang.
+     */
+    public function handover(Request $request, ReturnMaterial $returnMaterial)
+    {
+        // Hanya produksi peminta yang dapat mengembalikan barangnya sendiri
+        if (!auth()->user()->hasRole('produksi') || $returnMaterial->returned_by != auth()->id()) {
+            abort(403, 'Anda hanya dapat menyerahkan pengembalian milik Anda sendiri.');
+        }
+
+        // Pengembalian harus sudah disetujui dan belum diserahkan
+        if ($returnMaterial->status !== 'approved') {
+            return redirect()->back()->with('error', 'Barang hanya dapat diserahkan untuk pengembalian yang sudah disetujui.');
+        }
+        if ($returnMaterial->handed_over_at) {
+            return redirect()->back()->with('error', 'Barang untuk pengembalian ini sudah diserahkan sebelumnya.');
+        }
+
+        $returnMaterial->update([
+            'handed_over_by' => auth()->id(),
+            'handed_over_at' => now(),
+        ]);
+
+        return redirect()->back()->with('success', 'Barang berhasil diserahkan. Menunggu konfirmasi penerimaan oleh store.');
+    }
+
+    /**
+     * Serah terima: store menerima barang. Stok utama bertambah otomatis.
+     */
+    public function receive(Request $request, ReturnMaterial $returnMaterial)
+    {
+        // Hanya role store yang menerima barang kembali
+        if (!auth()->user()->hasRole('store')) {
+            abort(403, 'Hanya store yang dapat menerima barang pengembalian.');
+        }
+
+        // Barang harus sudah diserahkan dan belum diterima
+        if ($returnMaterial->status !== 'approved' || !$returnMaterial->handed_over_at) {
+            return redirect()->back()->with('error', 'Barang belum diserahkan oleh produksi.');
+        }
+        if ($returnMaterial->received_at) {
+            return redirect()->back()->with('error', 'Barang untuk pengembalian ini sudah diterima sebelumnya.');
+        }
+
         DB::transaction(function() use ($returnMaterial) {
-            // Get material and stock
             $material = $returnMaterial->request->material;
             $stock = $material->stock ?? Stock::create(['material_id' => $material->id, 'quantity' => 0]);
-            
-            // Record current quantity
+
             $quantityBefore = $stock->quantity;
-            
-            // Calculate new quantity
             $newQuantity = $quantityBefore + $returnMaterial->quantity;
-            
-            // Update stock
+
             $stock->update(['quantity' => $newQuantity]);
-            
-            // Record stock adjustment
+
             StockAdjustment::create([
                 'material_id' => $material->id,
                 'user_id' => auth()->id(),
@@ -278,19 +337,16 @@ class ReturnMaterialController extends Controller
                 'adjustment_quantity' => $returnMaterial->quantity,
                 'quantity_after' => $newQuantity,
                 'type' => 'return',
-                'notes' => "Pengembalian #{$returnMaterial->return_number} disetujui"
+                'notes' => "Pengembalian #{$returnMaterial->return_number} diterima store"
             ]);
-            
-            // Update return status
+
             $returnMaterial->update([
-                'status' => 'approved',
-                'approved_by' => auth()->id(),
-                'approved_at' => now()
+                'received_by' => auth()->id(),
+                'received_at' => now(),
             ]);
         });
-        
-        return redirect()->route('admin.returns.approvals')
-            ->with('success', 'Pengembalian material berhasil disetujui.');
+
+        return redirect()->back()->with('success', 'Barang pengembalian berhasil diterima dan stok telah bertambah.');
     }
 
     /**

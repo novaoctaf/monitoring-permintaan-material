@@ -132,29 +132,49 @@
               </td>
               <td>
                 <div class="btn-list flex-nowrap">
-                  <a href="{{ route('admin.requests.show', $req) }}" class="btn btn-sm btn-primary">
+                  <a href="{{ route('admin.requests.show', $req) }}" class="btn btn-sm btn-icon btn-primary" title="Lihat detail">
                     <i class="ti ti-eye"></i>
                   </a>
+
+                  @if(auth()->user()->can('approve-requests') && !auth()->user()->hasRole('store') && $req->status == 'pending')
+                    <button type="button" class="btn btn-sm btn-success js-confirm-action"
+                            data-action="{{ route('admin.requests.approve', $req) }}"
+                            data-title="Setujui Permintaan {{ $req->request_number }}"
+                            data-note="Setelah disetujui, barang diserahkan oleh store."
+                            data-body="<div class='mb-1'><strong>Material:</strong> {{ $req->material->name }}</div><div class='mb-1'><strong>Jumlah:</strong> {{ $req->quantity }} {{ $req->material->unit }}</div><div class='mb-1'><strong>Peminta:</strong> {{ $req->requester->name }}</div>"
+                            data-confirm-label="Setujui" data-confirm-class="btn-success">
+                      <i class="ti ti-check"></i> Setujui
+                    </button>
+                    <button type="button" class="btn btn-sm btn-danger js-reject-action"
+                            data-action="{{ route('admin.requests.reject', $req) }}"
+                            data-title="Tolak Permintaan {{ $req->request_number }}">
+                      <i class="ti ti-x"></i> Tolak
+                    </button>
+                  @endif
+
                   @role('store')
                     @if($req->status == 'approved' && !$req->handed_over_at)
-                    <form action="{{ route('admin.requests.handover', $req) }}" method="POST"
-                          onsubmit="return confirm('Serahkan barang untuk permintaan ini? Stok akan berkurang.');">
-                      @csrf
-                      <button type="submit" class="btn btn-sm btn-cyan">
-                        <i class="ti ti-truck-delivery"></i> Serahkan
-                      </button>
-                    </form>
+                    <button type="button" class="btn btn-sm btn-cyan js-confirm-action"
+                            data-action="{{ route('admin.requests.handover', $req) }}"
+                            data-title="Serahkan Barang · {{ $req->request_number }}"
+                            data-note="Stok utama akan berkurang."
+                            data-body="<div class='mb-1'><strong>Material:</strong> {{ $req->material->name }}</div><div class='mb-1'><strong>Jumlah:</strong> {{ $req->quantity }} {{ $req->material->unit }}</div><div class='mb-1'><strong>Peminta:</strong> {{ $req->requester->name }}</div>"
+                            data-confirm-label="Serahkan" data-confirm-class="btn-cyan">
+                      <i class="ti ti-truck-delivery"></i> Serahkan
+                    </button>
                     @endif
                   @endrole
+
                   @role('produksi')
                     @if($req->status == 'approved' && $req->handed_over_at && !$req->received_at && $req->requested_by == auth()->id())
-                    <form action="{{ route('admin.requests.receive', $req) }}" method="POST"
-                          onsubmit="return confirm('Konfirmasi barang sudah diterima? Stok produksi Anda akan bertambah.');">
-                      @csrf
-                      <button type="submit" class="btn btn-sm btn-teal">
-                        <i class="ti ti-package-import"></i> Terima
-                      </button>
-                    </form>
+                    <button type="button" class="btn btn-sm btn-teal js-confirm-action"
+                            data-action="{{ route('admin.requests.receive', $req) }}"
+                            data-title="Terima Barang · {{ $req->request_number }}"
+                            data-note="Stok produksi Anda akan bertambah."
+                            data-body="<div class='mb-1'><strong>Material:</strong> {{ $req->material->name }}</div><div class='mb-1'><strong>Jumlah:</strong> {{ $req->quantity }} {{ $req->material->unit }}</div>"
+                            data-confirm-label="Terima" data-confirm-class="btn-teal">
+                      <i class="ti ti-package-import"></i> Terima
+                    </button>
                     @endif
                   @endrole
                 </div>
@@ -197,6 +217,7 @@
   </div>
 </div>
 
+@include('layouts.partials.action-modals')
 
 @endsection
 

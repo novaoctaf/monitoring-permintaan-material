@@ -1,3 +1,11 @@
+@php
+  // Jumlah menunggu persetujuan untuk badge notifikasi (hanya untuk approver).
+  $pendingRequestCount = auth()->user()->can('approve-requests')
+    ? \App\Models\RequestMaterial::where('status', 'pending')->count() : 0;
+  $pendingReturnCount = auth()->user()->can('approve-returns')
+    ? \App\Models\ReturnMaterial::where('status', 'pending')->count() : 0;
+@endphp
+
 <!-- Dashboard -->
 <li class="nav-item {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">
   <a class="nav-link" href="{{ route('admin.dashboard') }}">
@@ -133,9 +141,12 @@
       <i class="ti ti-shopping-cart"></i>
     </span>
     <span class="nav-link-title">Permintaan Material</span>
+    @if($pendingRequestCount > 0)
+      <span class="badge badge-empty bg-red ms-2 align-self-center flex-shrink-0" title="{{ $pendingRequestCount }} menunggu persetujuan"></span>
+    @endif
   </a>
   <div class="dropdown-menu {{ request()->routeIs('admin.requests.*') ? 'show' : '' }}">
-    <a class="dropdown-item {{ request()->routeIs('admin.requests.index') ? 'active' : '' }}"
+    <a class="dropdown-item {{ request()->routeIs('admin.requests.index') || request()->routeIs('admin.requests.show') ? 'active' : '' }}"
       href="{{ route('admin.requests.index') }}">
       Daftar Permintaan
     </a>
@@ -146,9 +157,12 @@
     </a>
     @endcan
     @can('approve-requests')
-    <a class="dropdown-item {{ request()->routeIs('admin.requests.approvals') ? 'active' : '' }}"
+    <a class="dropdown-item d-flex align-items-center {{ request()->routeIs('admin.requests.approvals') ? 'active' : '' }}"
       href="{{ route('admin.requests.approvals') }}">
       Persetujuan Permintaan
+      @if($pendingRequestCount > 0)
+        <span class="badge bg-red text-white ms-auto me-1 badge-pill flex-shrink-0" style="font-size:.6rem;">{{ $pendingRequestCount > 99 ? '99+' : $pendingRequestCount }}</span>
+      @endif
     </a>
     @endcan
   </div>
@@ -166,9 +180,12 @@
       <i class="ti ti-arrow-back-up"></i>
     </span>
     <span class="nav-link-title">Pengembalian Material</span>
+    @if($pendingReturnCount > 0)
+      <span class="badge badge-empty bg-red ms-2 align-self-center flex-shrink-0" title="{{ $pendingReturnCount }} menunggu persetujuan"></span>
+    @endif
   </a>
   <div class="dropdown-menu {{ request()->routeIs('admin.returns.*') ? 'show' : '' }}">
-    <a class="dropdown-item {{ request()->routeIs('admin.returns.index') ? 'active' : '' }}"
+    <a class="dropdown-item {{ request()->routeIs('admin.returns.index') || request()->routeIs('admin.returns.show') ? 'active' : '' }}"
       href="{{ route('admin.returns.index') }}">
       Daftar Pengembalian
     </a>
@@ -179,9 +196,12 @@
     </a>
     @endcan
     @can('approve-returns')
-    <a class="dropdown-item {{ request()->routeIs('admin.returns.approvals') ? 'active' : '' }}"
+    <a class="dropdown-item d-flex align-items-center {{ request()->routeIs('admin.returns.approvals') ? 'active' : '' }}"
       href="{{ route('admin.returns.approvals') }}">
       Persetujuan Pengembalian
+      @if($pendingReturnCount > 0)
+        <span class="badge bg-red text-white ms-auto me-1 badge-pill flex-shrink-0" style="font-size:.6rem;">{{ $pendingReturnCount > 99 ? '99+' : $pendingReturnCount }}</span>
+      @endif
     </a>
     @endcan
   </div>
@@ -254,6 +274,16 @@
       Izin
     </a> --}}
   </div>
+</li>
+
+<!-- Activity Log / Audit Trail - Staff only -->
+<li class="nav-item {{ request()->routeIs('admin.activity-logs.*') ? 'active' : '' }}">
+  <a class="nav-link" href="{{ route('admin.activity-logs.index') }}">
+    <span class="nav-link-icon d-md-none d-lg-inline-block">
+      <i class="ti ti-history"></i>
+    </span>
+    <span class="nav-link-title">Log Aktivitas</span>
+  </a>
 </li>
 @endrole
 

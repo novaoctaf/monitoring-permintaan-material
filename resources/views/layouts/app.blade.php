@@ -27,6 +27,9 @@
     <!-- SweetAlert2 CSS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
 
+    <!-- Tom Select CSS (enhanced dropdowns) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css">
+
     <!-- ApexCharts CSS -->
     
     @stack('styles')
@@ -39,6 +42,27 @@
           overflow: visible;
         }
       }
+
+      /* Tom Select: pastikan dropdown solid & di atas elemen lain (tidak tembus). */
+      .ts-wrapper { display: block; }
+      .ts-control {
+        min-height: calc(1.4285714em + 0.875rem + 2px);
+        background: var(--tblr-bg-forms, #fff);
+        border-color: var(--tblr-border-color, #dee2e6);
+      }
+      .ts-dropdown {
+        z-index: 1060;
+        background: var(--tblr-bg-surface, #fff);
+        border: 1px solid var(--tblr-border-color, #dee2e6);
+        box-shadow: 0 .5rem 1rem rgba(0,0,0,.15);
+        margin-top: 2px;
+      }
+      .ts-dropdown .active {
+        background: var(--tblr-primary, #206bc4);
+        color: #fff;
+      }
+      /* Badge notifikasi sidebar tidak melewati tepi. */
+      .navbar-vertical .nav-link { align-items: center; }
     </style>
 </head>
 <body>
@@ -51,6 +75,24 @@
 
     <!-- SweetAlert2 JS -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <!-- Tom Select JS (enhanced dropdowns) -->
+    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+    <script>
+      // Sulap semua <select.form-select> jadi dropdown yang bisa dicari.
+      // Lewati select yang menandai dirinya dengan .no-tomselect.
+      document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('select.form-select:not(.no-tomselect)').forEach(function (el) {
+          if (el.tomselect) return;
+          new TomSelect(el, {
+            placeholder: el.querySelector('option[value=""]')?.textContent || 'Pilih...',
+            searchField: ['text'],
+            maxOptions: null,
+            controlInput: el.options.length > 8 ? undefined : null, // sembunyikan search box bila opsi sedikit
+          });
+        });
+      });
+    </script>
 
     <!-- ApexCharts JS -->
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>

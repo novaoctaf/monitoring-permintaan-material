@@ -21,26 +21,28 @@
     {{-- Serah terima: store menyerahkan barang --}}
     @role('store')
       @if($request->status == 'approved' && !$request->handed_over_at)
-      <form action="{{ route('admin.requests.handover', $request) }}" method="POST"
-            onsubmit="return confirm('Serahkan barang untuk permintaan ini? Stok akan berkurang.');">
-        @csrf
-        <button type="submit" class="btn btn-cyan">
-          <i class="ti ti-truck-delivery"></i> Serahkan Barang
-        </button>
-      </form>
+      <button type="button" class="btn btn-cyan js-confirm-action"
+              data-action="{{ route('admin.requests.handover', $request) }}"
+              data-title="Serahkan Barang · {{ $request->request_number }}"
+              data-note="Stok utama akan berkurang."
+              data-body="<div class='mb-1'><strong>Material:</strong> {{ $request->material->name }}</div><div class='mb-1'><strong>Jumlah:</strong> {{ $request->quantity }} {{ $request->material->unit }}</div><div class='mb-1'><strong>Peminta:</strong> {{ $request->requester->name }}</div>"
+              data-confirm-label="Serahkan" data-confirm-class="btn-cyan">
+        <i class="ti ti-truck-delivery"></i> Serahkan Barang
+      </button>
       @endif
     @endrole
 
     {{-- Serah terima: produksi menerima barang --}}
     @role('produksi')
       @if($request->status == 'approved' && $request->handed_over_at && !$request->received_at && $request->requested_by == auth()->id())
-      <form action="{{ route('admin.requests.receive', $request) }}" method="POST"
-            onsubmit="return confirm('Konfirmasi barang sudah diterima? Stok produksi Anda akan bertambah.');">
-        @csrf
-        <button type="submit" class="btn btn-teal">
-          <i class="ti ti-package-import"></i> Terima Barang
-        </button>
-      </form>
+      <button type="button" class="btn btn-teal js-confirm-action"
+              data-action="{{ route('admin.requests.receive', $request) }}"
+              data-title="Terima Barang · {{ $request->request_number }}"
+              data-note="Stok produksi Anda akan bertambah."
+              data-body="<div class='mb-1'><strong>Material:</strong> {{ $request->material->name }}</div><div class='mb-1'><strong>Jumlah:</strong> {{ $request->quantity }} {{ $request->material->unit }}</div>"
+              data-confirm-label="Terima" data-confirm-class="btn-teal">
+        <i class="ti ti-package-import"></i> Terima Barang
+      </button>
       @endif
     @endrole
 
@@ -171,6 +173,52 @@
   
   
   <div class="col-lg-4">
+    <!-- Audit Trail / Riwayat Aktivitas -->
+    <div class="card mb-3">
+      <div class="card-header">
+        <h3 class="card-title">Riwayat Aktivitas</h3>
+      </div>
+      <div class="card-body">
+        @php $fieldLabels = \App\Models\RequestMaterial::activityFieldLabels(); @endphp
+        @if($request->activities->isEmpty())
+          <p class="text-secondary mb-0">Belum ada aktivitas tercatat.</p>
+        @else
+          <ul class="timeline">
+          @foreach($request->activities as $activity)
+            <li class="timeline-event">
+              <div class="timeline-event-icon bg-{{ $activity->event_color }}-lt">
+                <i class="ti {{ $activity->event_icon }}"></i>
+              </div>
+              <div class="card timeline-event-card">
+                <div class="card-body">
+                  <div class="text-secondary float-end">{{ $activity->created_at->format('d M Y H:i') }}</div>
+                  <h4 class="mb-1">{{ $activity->description }}</h4>
+                  <p class="text-secondary mb-1">
+                    <i class="ti ti-user me-1"></i>{{ $activity->causer->name ?? 'Sistem' }}
+                  </p>
+                  @if($activity->event === 'updated' && !empty($activity->properties['attributes']))
+                    <div class="mt-2">
+                      @foreach($activity->properties['attributes'] as $field => $newValue)
+                        @if(isset($fieldLabels[$field]))
+                          <div class="small text-secondary">
+                            <strong>{{ $fieldLabels[$field] }}:</strong>
+                            <span class="text-decoration-line-through">{{ $activity->properties['old'][$field] ?? '-' }}</span>
+                            <i class="ti ti-arrow-right"></i>
+                            {{ $newValue ?? '-' }}
+                          </div>
+                        @endif
+                      @endforeach
+                    </div>
+                  @endif
+                </div>
+              </div>
+            </li>
+          @endforeach
+          </ul>
+        @endif
+      </div>
+    </div>
+
     <!-- Return Information if any -->
     @if($request->status == 'approved' && $request->returns->count() > 0)
     <div class="card mb-3">
@@ -276,6 +324,7 @@
 </div>
 @endif
 
+@include('layouts.partials.action-modals')
 
 @endsection
 
