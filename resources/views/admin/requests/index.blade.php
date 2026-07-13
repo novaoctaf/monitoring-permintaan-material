@@ -119,14 +119,45 @@
                   <span class="badge bg-yellow-lt">Menunggu</span>
                 @elseif($req->status == 'approved')
                   <span class="badge bg-green-lt">Disetujui</span>
+                  @if($req->handover_status == 'received')
+                    <span class="badge bg-teal-lt">Diterima</span>
+                  @elseif($req->handover_status == 'handed_over')
+                    <span class="badge bg-cyan-lt">Diserahkan</span>
+                  @else
+                    <span class="badge bg-azure-lt">Menunggu Penyerahan</span>
+                  @endif
                 @else
                   <span class="badge bg-red-lt">Ditolak</span>
                 @endif
               </td>
               <td>
-                <a href="{{ route('admin.requests.show', $req) }}" class="btn btn-sm btn-primary">
-                  <i class="ti ti-eye"></i>
-                </a>
+                <div class="btn-list flex-nowrap">
+                  <a href="{{ route('admin.requests.show', $req) }}" class="btn btn-sm btn-primary">
+                    <i class="ti ti-eye"></i>
+                  </a>
+                  @role('store')
+                    @if($req->status == 'approved' && !$req->handed_over_at)
+                    <form action="{{ route('admin.requests.handover', $req) }}" method="POST"
+                          onsubmit="return confirm('Serahkan barang untuk permintaan ini? Stok akan berkurang.');">
+                      @csrf
+                      <button type="submit" class="btn btn-sm btn-cyan">
+                        <i class="ti ti-truck-delivery"></i> Serahkan
+                      </button>
+                    </form>
+                    @endif
+                  @endrole
+                  @role('produksi')
+                    @if($req->status == 'approved' && $req->handed_over_at && !$req->received_at && $req->requested_by == auth()->id())
+                    <form action="{{ route('admin.requests.receive', $req) }}" method="POST"
+                          onsubmit="return confirm('Konfirmasi barang sudah diterima? Stok produksi Anda akan bertambah.');">
+                      @csrf
+                      <button type="submit" class="btn btn-sm btn-teal">
+                        <i class="ti ti-package-import"></i> Terima
+                      </button>
+                    </form>
+                    @endif
+                  @endrole
+                </div>
               </td>
             </tr>
           @empty

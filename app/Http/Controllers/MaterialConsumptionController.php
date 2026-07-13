@@ -149,6 +149,7 @@ class MaterialConsumptionController extends Controller
     {
         $totalRequested = RequestMaterial::where('material_id', $material->id)
             ->where('status', 'approved')
+            ->whereNotNull('received_at') // hanya barang yang sudah diterima produksi
             ->where('requested_by', auth()->id())
             ->sum('quantity');
 

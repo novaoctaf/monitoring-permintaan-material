@@ -98,7 +98,7 @@ class RequestMaterialController extends Controller
                 "❌ Permintaan jumlah melebihi stok yang tersedia!\n" .
                 "Jumlah diminta: {$validated['quantity']} {$material->unit}\n" .
                 "Stok tersedia: {$availableStock} {$material->unit}"
-            )->withErrors(['quantity' => "Stok material tidak mencukupi"]);
+            )->withErrors(['quantity' => "Stok tidak mencukupi"]);
         }
         
         // Generate unique request number
@@ -184,47 +184,100 @@ class RequestMaterialController extends Controller
         if ($requestMaterial->status !== 'pending') {
             return redirect()->back()->with('error', 'Permintaan ini sudah diproses sebelumnya.');
         }
-        
-        DB::transaction(function() use ($requestMaterial) {
-            // Get material and stock
-            $material = $requestMaterial->material;
-            $stock = $material->stock ?? Stock::create(['material_id' => $material->id, 'quantity' => 0]);
-            
-            // Record current quantity
-            $quantityBefore = $stock->quantity;
-            
-            // Calculate new quantity
-            $newQuantity = $quantityBefore - $requestMaterial->quantity;
-            
-            // Check if sufficient stock
-            if ($newQuantity < 0) {
-                throw new \Exception('Stok tidak mencukupi untuk menyetujui permintaan ini.');
-            }
-            
-            // Update stock
-            $stock->update(['quantity' => $newQuantity]);
-            
-            // Record stock adjustment
-            StockAdjustment::create([
-                'material_id' => $material->id,
-                'user_id' => auth()->id(),
-                'quantity_before' => $quantityBefore,
-                'adjustment_quantity' => -$requestMaterial->quantity,
-                'quantity_after' => $newQuantity,
-                'type' => 'request',
-                'notes' => "Permintaan #{$requestMaterial->request_number} disetujui"
-            ]);
-            
-            // Update request status
-            $requestMaterial->update([
-                'status' => 'approved',
-                'approved_by' => auth()->id(),
-                'approved_at' => now()
-            ]);
-        });
-        
+
+        // Persetujuan TIDAK mengurangi stok. Stok utama baru berkurang saat
+        // barang diserahkan oleh store (lihat handover()).
+        $requestMaterial->update([
+            'status' => 'approved',
+            'approved_by' => auth()->id(),
+            'approved_at' => now()
+        ]);
+
         return redirect()->route('admin.requests.approvals')
-            ->with('success', 'Permintaan material berhasil disetujui.');
+            ->with('success', 'Permintaan material berhasil disetujui. Menunggu penyerahan barang oleh store.');
+    }
+
+    /**
+     * Serah terima: store menyerahkan barang.
+     * Stok utama berkurang otomatis saat barang diserahkan.
+     */
+    public function handover(Request $request, RequestMaterial $requestMaterial)
+    {
+        // Hanya role store yang menyerahkan barang
+        if (!auth()->user()->hasRole('store')) {
+            abort(403, 'Hanya store yang dapat menyerahkan barang.');
+        }
+
+        // Permintaan harus sudah disetujui dan belum diserahkan
+        if ($requestMaterial->status !== 'approved') {
+            return redirect()->back()->with('error', 'Barang hanya dapat diserahkan untuk permintaan yang sudah disetujui.');
+        }
+        if ($requestMaterial->handed_over_at) {
+            return redirect()->back()->with('error', 'Barang untuk permintaan ini sudah diserahkan sebelumnya.');
+        }
+
+        try {
+            DB::transaction(function() use ($requestMaterial) {
+                $material = $requestMaterial->material;
+                $stock = $material->stock ?? Stock::create(['material_id' => $material->id, 'quantity' => 0]);
+
+                $quantityBefore = $stock->quantity;
+                $newQuantity = $quantityBefore - $requestMaterial->quantity;
+
+                if ($newQuantity < 0) {
+                    throw new \Exception('Stok tidak mencukupi untuk menyerahkan barang ini.');
+                }
+
+                // Stok utama berkurang saat barang diserahkan
+                $stock->update(['quantity' => $newQuantity]);
+
+                StockAdjustment::create([
+                    'material_id' => $material->id,
+                    'user_id' => auth()->id(),
+                    'quantity_before' => $quantityBefore,
+                    'adjustment_quantity' => -$requestMaterial->quantity,
+                    'quantity_after' => $newQuantity,
+                    'type' => 'request',
+                    'notes' => "Barang permintaan #{$requestMaterial->request_number} diserahkan"
+                ]);
+
+                $requestMaterial->update([
+                    'handed_over_by' => auth()->id(),
+                    'handed_over_at' => now(),
+                ]);
+            });
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', $e->getMessage());
+        }
+
+        return redirect()->back()->with('success', 'Barang berhasil diserahkan dan stok telah berkurang.');
+    }
+
+    /**
+     * Serah terima: produksi menerima barang.
+     * Stok produksi (dihitung dari permintaan yang sudah diterima) bertambah otomatis.
+     */
+    public function receive(Request $request, RequestMaterial $requestMaterial)
+    {
+        // Hanya peminta (produksi) yang dapat menerima barangnya sendiri
+        if (!auth()->user()->hasRole('produksi') || $requestMaterial->requested_by != auth()->id()) {
+            abort(403, 'Anda hanya dapat menerima barang dari permintaan Anda sendiri.');
+        }
+
+        // Barang harus sudah diserahkan dan belum diterima
+        if ($requestMaterial->status !== 'approved' || !$requestMaterial->handed_over_at) {
+            return redirect()->back()->with('error', 'Barang belum diserahkan oleh store.');
+        }
+        if ($requestMaterial->received_at) {
+            return redirect()->back()->with('error', 'Barang untuk permintaan ini sudah diterima sebelumnya.');
+        }
+
+        $requestMaterial->update([
+            'received_by' => auth()->id(),
+            'received_at' => now(),
+        ]);
+
+        return redirect()->back()->with('success', 'Barang berhasil diterima. Stok produksi Anda telah bertambah.');
     }
 
     /**

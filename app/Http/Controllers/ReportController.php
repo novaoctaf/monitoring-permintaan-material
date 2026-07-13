@@ -147,6 +147,7 @@ class ReportController extends Controller
         $stocks = $materials->map(function($material) {
             $totalRequested = RequestMaterial::where('material_id', $material->id)
                 ->where('status', 'approved')
+                ->whereNotNull('received_at') // hanya barang yang sudah diterima produksi
                 ->sum('quantity');
 
             $totalReturned = ReturnMaterial::whereHas('request', function($q) use ($material) {
@@ -200,7 +201,7 @@ class ReportController extends Controller
             'total_materials' => Material::count(),
             'total_production_stock' => $stocks->sum('quantity'),
             'low_stock_count' => collect($materials)->filter(function($material) {
-                $totalRequested = RequestMaterial::where('material_id', $material->id)->where('status', 'approved')->sum('quantity');
+                $totalRequested = RequestMaterial::where('material_id', $material->id)->where('status', 'approved')->whereNotNull('received_at')->sum('quantity');
                 $totalReturned = ReturnMaterial::whereHas('request', function($q) use ($material) {
                         $q->where('material_id', $material->id);
                     })->where('status', 'approved')->sum('quantity');
@@ -209,7 +210,7 @@ class ReportController extends Controller
                 return $quantity <= 10 && $quantity > 0;
             })->count(),
             'available_count' => collect($materials)->filter(function($material) {
-                $totalRequested = RequestMaterial::where('material_id', $material->id)->where('status', 'approved')->sum('quantity');
+                $totalRequested = RequestMaterial::where('material_id', $material->id)->where('status', 'approved')->whereNotNull('received_at')->sum('quantity');
                 $totalReturned = ReturnMaterial::whereHas('request', function($q) use ($material) {
                         $q->where('material_id', $material->id);
                     })->where('status', 'approved')->sum('quantity');
@@ -237,6 +238,7 @@ class ReportController extends Controller
         $stocks = $materials->map(function($material) {
             $totalRequested = RequestMaterial::where('material_id', $material->id)
                 ->where('status', 'approved')
+                ->whereNotNull('received_at') // hanya barang yang sudah diterima produksi
                 ->sum('quantity');
 
             $totalReturned = ReturnMaterial::whereHas('request', function($q) use ($material) {

@@ -50,6 +50,9 @@ Route::prefix('admin')->as('admin.')->middleware(['auth'])->group(function () {
     Route::get('requests/approvals', [RequestMaterialController::class, 'approvals'])->name('requests.approvals');
     Route::post('requests/{requestMaterial}/approve', [RequestMaterialController::class, 'approve'])->name('requests.approve');
     Route::post('requests/{requestMaterial}/reject', [RequestMaterialController::class, 'reject'])->name('requests.reject');
+    // Serah terima barang
+    Route::post('requests/{requestMaterial}/handover', [RequestMaterialController::class, 'handover'])->name('requests.handover');
+    Route::post('requests/{requestMaterial}/receive', [RequestMaterialController::class, 'receive'])->name('requests.receive');
     Route::resource('requests', RequestMaterialController::class);
     
     // Return management routes

@@ -334,6 +334,7 @@ class ReturnMaterialController extends Controller
         $totalRequested = RequestMaterial::where('material_id', $materialId)
             ->where('requested_by', $userId)
             ->where('status', 'approved')
+            ->whereNotNull('received_at') // hanya barang yang sudah diterima produksi
             ->sum('quantity');
 
         $totalReturned = ReturnMaterial::whereHas('request', function ($q) use ($materialId, $userId) {

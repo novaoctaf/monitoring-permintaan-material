@@ -30,11 +30,7 @@
                           data-unit="{{ $material->unit }}" 
                           {{ old('material_id') == $material->id ? 'selected' : '' }}
                           {{ $disabled ? 'disabled' : '' }}>
-                    @role('staff|store')
-                      {{ $material->name }} - {{ $material->category->name ?? 'No category' }} (Stok: {{ $stockQty }} {{ $material->unit }})
-                    @else
-                      {{ $material->name }} - {{ $material->category->name ?? 'No category' }}
-                    @endrole
+                    {{ $material->name }} - {{ $material->category->name ?? 'No category' }} (Stok: {{ $stockQty }} {{ $material->unit }})
                   </option>
                 @endforeach
               </select>

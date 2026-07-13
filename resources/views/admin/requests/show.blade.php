@@ -9,21 +9,41 @@
   <div class="btn-list">
     @if(auth()->user()->can('approve-requests') && $request->status == 'pending')
     <div class="btn-group">
-      @if($request->material->stock && $request->material->stock->quantity >= $request->quantity)
       <button type="button" class="btn btn-success d-none d-sm-inline-block" data-bs-toggle="modal" data-bs-target="#approveModal">
         <i class="ti ti-check"></i> Setujui
       </button>
-      @else
-      <button type="button" class="btn btn-success d-none d-sm-inline-block" disabled title="Stok tidak cukup">
-        <i class="ti ti-check"></i> Setujui
-      </button>
-      @endif
       <button type="button" class="btn btn-danger d-none d-sm-inline-block" data-bs-toggle="modal" data-bs-target="#rejectModal">
         <i class="ti ti-x"></i> Tolak
       </button>
     </div>
     @endif
-    
+
+    {{-- Serah terima: store menyerahkan barang --}}
+    @role('store')
+      @if($request->status == 'approved' && !$request->handed_over_at)
+      <form action="{{ route('admin.requests.handover', $request) }}" method="POST"
+            onsubmit="return confirm('Serahkan barang untuk permintaan ini? Stok akan berkurang.');">
+        @csrf
+        <button type="submit" class="btn btn-cyan">
+          <i class="ti ti-truck-delivery"></i> Serahkan Barang
+        </button>
+      </form>
+      @endif
+    @endrole
+
+    {{-- Serah terima: produksi menerima barang --}}
+    @role('produksi')
+      @if($request->status == 'approved' && $request->handed_over_at && !$request->received_at && $request->requested_by == auth()->id())
+      <form action="{{ route('admin.requests.receive', $request) }}" method="POST"
+            onsubmit="return confirm('Konfirmasi barang sudah diterima? Stok produksi Anda akan bertambah.');">
+        @csrf
+        <button type="submit" class="btn btn-teal">
+          <i class="ti ti-package-import"></i> Terima Barang
+        </button>
+      </form>
+      @endif
+    @endrole
+
     @if(auth()->user()->can('view-requests'))
     <a href="{{ auth()->user()->can('approve-requests') ? route('admin.requests.approvals') : route('admin.requests.index') }}" class="btn btn-outline-secondary">
       <i class="ti ti-arrow-left"></i> Kembali
@@ -43,6 +63,13 @@
             <span class="badge bg-yellow-lt">Menunggu</span>
           @elseif($request->status == 'approved')
             <span class="badge bg-green-lt">Disetujui</span>
+            @if($request->handover_status == 'received')
+              <span class="badge bg-teal-lt">Diterima</span>
+            @elseif($request->handover_status == 'handed_over')
+              <span class="badge bg-cyan-lt">Diserahkan</span>
+            @else
+              <span class="badge bg-azure-lt">Menunggu Penyerahan</span>
+            @endif
           @else
             <span class="badge bg-red-lt">Ditolak</span>
           @endif
@@ -104,6 +131,32 @@
             <div class="datagrid-content">{{ $request->approved_at ? $request->approved_at->format('d M Y H:i') : '-' }}</div>
           </div>
           @endif
+
+          @if($request->status == 'approved')
+          <div class="datagrid-item">
+            <div class="datagrid-title">Penyerahan Barang</div>
+            <div class="datagrid-content">
+              @if($request->handed_over_at)
+                Oleh {{ $request->handedOverBy->name ?? '-' }} &middot; {{ $request->handed_over_at->format('d M Y H:i') }}
+              @else
+                <span class="text-muted">Menunggu penyerahan oleh store</span>
+              @endif
+            </div>
+          </div>
+
+          <div class="datagrid-item">
+            <div class="datagrid-title">Penerimaan Barang</div>
+            <div class="datagrid-content">
+              @if($request->received_at)
+                Oleh {{ $request->receivedBy->name ?? '-' }} &middot; {{ $request->received_at->format('d M Y H:i') }}
+              @elseif($request->handed_over_at)
+                <span class="text-muted">Menunggu konfirmasi penerimaan oleh produksi</span>
+              @else
+                <span class="text-muted">-</span>
+              @endif
+            </div>
+          </div>
+          @endif
           
           @if($request->notes)
           <div class="datagrid-item col-span-2">
@@ -158,7 +211,7 @@
     @endif
 
     <!-- Create Return button for approved requests -->
-    @if($request->status == 'approved' && auth()->id() == $request->requested_by && !$request->returns->where('status', 'pending')->count())
+    @if($request->status == 'approved' && $request->received_at && auth()->id() == $request->requested_by && !$request->returns->where('status', 'pending')->count())
     <div class="card">
       <div class="card-body">
         <h3 class="card-title">Pengembalian Material</h3>

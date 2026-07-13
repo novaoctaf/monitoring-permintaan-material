@@ -14,8 +14,9 @@ class RoleSeeder extends Seeder
     public function run(): void
     {
         // Create Staff Role (Admin)
+        // Admin tidak boleh membuat permintaan material, jadi kecualikan 'create-requests'
         $staffRole = Role::firstOrCreate(['name' => 'staff']);
-        $staffRole->syncPermissions(Permission::all());
+        $staffRole->syncPermissions(Permission::where('name', '!=', 'create-requests')->get());
 
         // Create Store Role
         $storeRole = Role::firstOrCreate(['name' => 'store']);

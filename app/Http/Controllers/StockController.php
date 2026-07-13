@@ -45,6 +45,7 @@ class StockController extends Controller
                 $totalRequested = \App\Models\RequestMaterial::where('material_id', $material->id)
                     ->where('requested_by', $userId)
                     ->where('status', 'approved')
+                    ->whereNotNull('received_at') // hanya barang yang sudah diterima produksi
                     ->sum('quantity');
                 
                 // Total approved returns
@@ -145,6 +146,7 @@ class StockController extends Controller
                 $stocks = $materials->map(function($material) {
                     $totalRequested = \App\Models\RequestMaterial::where('material_id', $material->id)
                         ->where('status', 'approved')
+                        ->whereNotNull('received_at') // hanya barang yang sudah diterima produksi
                         ->sum('quantity');
 
                     $totalReturned = \App\Models\ReturnMaterial::whereHas('request', function($q) use ($material) {

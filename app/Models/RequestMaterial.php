@@ -25,20 +25,53 @@ class RequestMaterial extends Model
         'notes',
         'approved_by',
         'approved_at',
+        'handed_over_by',
+        'handed_over_at',
+        'received_by',
+        'received_at',
     ];
-    
+
     protected $casts = [
         'approved_at' => 'datetime',
+        'handed_over_at' => 'datetime',
+        'received_at' => 'datetime',
     ];
-    
+
     public function requester()
     {
         return $this->belongsTo(User::class, 'requested_by');
     }
-    
+
     public function approver()
     {
         return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    public function handedOverBy()
+    {
+        return $this->belongsTo(User::class, 'handed_over_by');
+    }
+
+    public function receivedBy()
+    {
+        return $this->belongsTo(User::class, 'received_by');
+    }
+
+    /**
+     * Label alur serah terima untuk permintaan yang sudah disetujui.
+     */
+    public function getHandoverStatusAttribute(): ?string
+    {
+        if ($this->status !== 'approved') {
+            return null;
+        }
+        if ($this->received_at) {
+            return 'received';
+        }
+        if ($this->handed_over_at) {
+            return 'handed_over';
+        }
+        return 'awaiting_handover';
     }
     
     public function material()
