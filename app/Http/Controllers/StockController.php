@@ -48,12 +48,13 @@ class StockController extends Controller
                     ->whereNotNull('received_at') // hanya barang yang sudah diterima produksi
                     ->sum('quantity');
                 
-                // Total approved returns
+                // Total returns yang SUDAH diterima kembali oleh store
                 $totalReturned = \App\Models\ReturnMaterial::whereHas('request', function($q) use ($material, $userId) {
                         $q->where('material_id', $material->id)
                           ->where('requested_by', $userId);
                     })
                     ->where('status', 'approved')
+                    ->whereNotNull('received_at') // baru mengurangi stok produksi setelah diterima store
                     ->sum('quantity');
 
                 // Total consumption recorded by the user
@@ -153,6 +154,7 @@ class StockController extends Controller
                             $q->where('material_id', $material->id);
                         })
                         ->where('status', 'approved')
+                        ->whereNotNull('received_at') // baru mengurangi stok produksi setelah diterima store
                         ->sum('quantity');
 
                     $totalConsumed = MaterialConsumption::where('material_id', $material->id)

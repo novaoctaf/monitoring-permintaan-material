@@ -87,6 +87,7 @@ class MaterialConsumptionController extends Controller
                     'material' => $r->request->material ?? null,
                     'quantity' => $r->quantity,
                     'status' => $r->status,
+                    'received_at' => $r->received_at,
                     'notes' => $r->notes,
                 ];
             });
@@ -120,7 +121,7 @@ class MaterialConsumptionController extends Controller
 
         $summary = [
             'total_used' => $consumptions->sum('quantity'),
-            'total_returned' => $returns->where('status', 'approved')->sum('quantity'),
+            'total_returned' => $returns->where('status', 'approved')->whereNotNull('received_at')->sum('quantity'),
             'total_records' => $history->count(),
             'distinct_materials' => $history->filter(fn ($h) => $h->material)
                 ->pluck('material.id')->unique()->count(),
@@ -158,6 +159,7 @@ class MaterialConsumptionController extends Controller
                   ->where('requested_by', auth()->id());
             })
             ->where('status', 'approved')
+            ->whereNotNull('received_at') // baru mengurangi stok produksi setelah diterima store
             ->sum('quantity');
 
         $totalConsumed = MaterialConsumption::where('material_id', $material->id)

@@ -157,7 +157,7 @@
                     <button type="button" class="btn btn-sm btn-cyan js-confirm-action"
                             data-action="{{ route('admin.requests.handover', $req) }}"
                             data-title="Serahkan Barang · {{ $req->request_number }}"
-                            data-note="Stok utama akan berkurang."
+                            data-note="Menunggu diterima produksi. Stok berkurang saat diterima."
                             data-body="<div class='mb-1'><strong>Material:</strong> {{ $req->material->name }}</div><div class='mb-1'><strong>Jumlah:</strong> {{ $req->quantity }} {{ $req->material->unit }}</div><div class='mb-1'><strong>Peminta:</strong> {{ $req->requester->name }}</div>"
                             data-confirm-label="Serahkan" data-confirm-class="btn-cyan">
                       <i class="ti ti-truck-delivery"></i> Serahkan
